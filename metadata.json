@@ -1,0 +1,6 @@
+{
+  "name": "AI LinkedIn Post Crafter",
+  "description": "Generate engaging LinkedIn posts about AI and Generative AI news, complete with a custom AI-generated image. Provide your own content ideas or let the AI suggest a topic for the day.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
