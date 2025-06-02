@@ -4,6 +4,22 @@ import { generateLinkedInPostText } from './services/geminiService';
 import { GeneratedPost, Status, RssItem } from './types';
 import LoadingSpinner from './components/LoadingSpinner';
 
+type Persona = "neutral" | "ethan-hunt" | "iron-man" | "mike-ross" | "harvey-specter";
+
+interface PersonaOption {
+  id: Persona;
+  name: string;
+  description: string;
+}
+
+const personaOptions: PersonaOption[] = [
+  { id: "neutral", name: "Neutral (Default)", description: "Standard professional tone." },
+  { id: "ethan-hunt", name: "Ethan Hunt", description: "Action-Oriented, Intense, Mission-Focused." },
+  { id: "iron-man", name: "Iron Man (Tony Stark)", description: "Witty, Confident, Tech-Savvy, Visionary." },
+  { id: "mike-ross", name: "Mike Ross", description: "Smart, Empathetic, Detailed, Insightful." },
+  { id: "harvey-specter", name: "Harvey Specter", description: "Confident, Direct, Assertive, Results-Driven." },
+];
+
 const App: React.FC = () => {
   const [userInput, setUserInput] = useState<string>('');
   const [generatedContent, setGeneratedContent] = useState<GeneratedPost | null>(null);
@@ -11,7 +27,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string>('');
   const [isApiKeyMissing, setIsApiKeyMissing] = useState<boolean>(false);
-  // const [includeImage, setIncludeImage] = useState<boolean>(true); // State for image generation preference REMOVED
+  const [selectedPersona, setSelectedPersona] = useState<Persona>("neutral");
 
   const [rssItems, setRssItems] = useState<RssItem[]>([]);
   const [rssStatus, setRssStatus] = useState<Status>(Status.Idle);
@@ -23,7 +39,7 @@ const App: React.FC = () => {
     if (!process.env.API_KEY) {
       setIsApiKeyMissing(true);
       setError("Configuration Error: Gemini API Key is not available. Please ensure the API_KEY environment variable is set and accessible to the application.");
-      setStatus(Status.Error); // Set main status to error to prevent generation
+      setStatus(Status.Error); 
       setRssStatus(Status.Error); 
       setRssError("API Key not configured, cannot fetch news or generate posts.");
     } else {
@@ -111,15 +127,8 @@ const App: React.FC = () => {
     setCopySuccess('');
 
     try {
-      const postText = await generateLinkedInPostText(userInput);
-      // Image generation logic removed
-      // let imageUrl = ''; 
-      // if (includeImage) {
-      //   const imageHint = postText.length > 80 ? postText.substring(0, 80) + "..." : postText;
-      //   imageUrl = await generatePostImage(imageHint);
-      // }
-      
-      setGeneratedContent({ text: postText }); // imageUrl removed
+      const postText = await generateLinkedInPostText(userInput, selectedPersona);
+      setGeneratedContent({ text: postText }); 
       setStatus(Status.Success);
     } catch (err) {
       console.error("Generation failed:", err);
@@ -127,7 +136,7 @@ const App: React.FC = () => {
       setError(errorMessage);
       setStatus(Status.Error);
     }
-  }, [userInput, isApiKeyMissing]); // includeImage dependency removed
+  }, [userInput, isApiKeyMissing, selectedPersona]); 
 
   const handleCopyText = useCallback(() => {
     if (generatedContent?.text) {
@@ -151,7 +160,7 @@ const App: React.FC = () => {
           AI LinkedIn Post Crafter
         </h1>
         <p className="text-slate-400 mt-2 text-lg">
-          Generate engaging posts with AI-powered content, optionally inspired by recent AI news.
+          Generate engaging posts with AI-powered content, optionally inspired by recent AI news and tailored to a chosen persona.
         </p>
       </header>
 
@@ -212,44 +221,56 @@ const App: React.FC = () => {
             aria-describedby="content-idea-description"
           />
           <p id="content-idea-description" className="sr-only">Enter your content idea here, or it can be pre-filled by selecting a news item. If left blank, the AI will suggest a daily topic.</p>
-          
-          {/* Include Image checkbox removed */}
-          {/* 
-          <div className="mt-4 flex items-center">
-            <input
-              type="checkbox"
-              id="include-image-checkbox"
-              checked={includeImage}
-              onChange={(e) => setIncludeImage(e.target.checked)}
-              disabled={status === Status.Loading || isApiKeyMissing}
-              className="h-4 w-4 text-sky-600 bg-slate-700 border-slate-500 rounded focus:ring-sky-500 focus:ring-offset-slate-800"
-              aria-labelledby="include-image-label"
-            />
-            <label htmlFor="include-image-checkbox" id="include-image-label" className="ml-2 text-sm text-slate-300">
-              Include AI-Generated Image
-            </label>
-          </div>
-          */}
+        </section>
+
+        <section aria-labelledby="persona-selection-heading" className="bg-slate-800/50 p-6 rounded-xl shadow-2xl border border-slate-700">
+          <h2 id="persona-selection-heading" className="text-2xl font-semibold text-sky-300 mb-4">3. Choose Your Persona (Optional)</h2>
+            <div className="mb-4">
+                <label htmlFor="persona-select" className="block text-sm font-medium text-slate-300 mb-1">
+                    Select Persona:
+                </label>
+                <select
+                    id="persona-select"
+                    value={selectedPersona}
+                    onChange={(e) => setSelectedPersona(e.target.value as Persona)}
+                    disabled={status === Status.Loading || isApiKeyMissing}
+                    className="w-full p-3 bg-slate-700 border border-slate-600 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-200"
+                    aria-describedby="persona-select-description"
+                >
+                    {personaOptions.map(persona => (
+                        <option key={persona.id} value={persona.id}>{persona.name} - <span className="text-xs italic text-slate-400">{persona.description}</span></option>
+                    ))}
+                </select>
+                <p id="persona-select-description" className="mt-1 text-xs text-slate-400">
+                    {personaOptions.find(p => p.id === selectedPersona)?.description}
+                </p>
+            </div>
           
           <button
             onClick={handleGeneratePost}
             disabled={status === Status.Loading || isApiKeyMissing}
-            className={`mt-4 w-full flex items-center justify-center px-6 py-3 text-lg font-semibold rounded-md transition-colors duration-150
+            className={`w-full flex items-center justify-center px-6 py-3 text-lg font-semibold rounded-md transition-colors duration-150
                         ${isApiKeyMissing ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 
                          status === Status.Loading 
                             ? 'bg-sky-700 text-sky-300 cursor-wait' 
                             : 'bg-sky-600 hover:bg-sky-500 text-white focus:ring-4 focus:ring-sky-400/50'}`}
             aria-live="polite"
+            aria-describedby={isApiKeyMissing ? "apikey-missing-message" : status === Status.Loading ? "loading-message" : "generate-post-action-description"}
           >
             {status === Status.Loading ? (
               <>
                 <LoadingSpinner size="w-6 h-6" color="text-sky-300" />
                 <span className="ml-2">Generating...</span>
+                <span id="loading-message" className="sr-only">Generating post, please wait.</span>
               </>
             ) : (
-              '✨ Generate Post' // Button text simplified
+              <>
+              '✨ Generate Post'
+              <span id="generate-post-action-description" className="sr-only">Click to generate LinkedIn post based on your input and selected persona.</span>
+              </>
             )}
           </button>
+           {isApiKeyMissing && <p id="apikey-missing-message" className="sr-only">Button is disabled because API Key is missing.</p>}
         </section>
 
         {status === Status.Error && error && !isApiKeyMissing && (
@@ -262,7 +283,7 @@ const App: React.FC = () => {
         {status === Status.Success && generatedContent && (
           <section className="bg-slate-800/50 p-6 rounded-xl shadow-2xl border border-slate-700 space-y-6" aria-labelledby="generated-post-heading">
             <div>
-              <h2 id="generated-post-heading" className="text-2xl font-semibold text-sky-300 mb-3">3. Your AI-Generated LinkedIn Post</h2>
+              <h2 id="generated-post-heading" className="text-2xl font-semibold text-sky-300 mb-3">4. Your AI-Generated LinkedIn Post</h2>
               <div className="bg-slate-700 p-4 rounded-md border border-slate-600">
                 <pre className="whitespace-pre-wrap text-slate-200 text-sm sm:text-base leading-relaxed">{generatedContent.text}</pre>
               </div>
@@ -274,23 +295,6 @@ const App: React.FC = () => {
                 {copySuccess ? copySuccess : 'Copy Post Text'}
               </button>
             </div>
-            
-            {/* Image display section removed */}
-            {/* 
-            {generatedContent.imageUrl && ( 
-              <div>
-                <h2 className="text-2xl font-semibold text-sky-300 mb-3">4. Suggested Image</h2>
-                <div className="bg-slate-700 p-2 rounded-md border border-slate-600 inline-block">
-                  <img 
-                    src={generatedContent.imageUrl} 
-                    alt="AI-generated visual for LinkedIn post" 
-                    className="rounded max-w-full h-auto md:max-h-96 object-contain" 
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-2">Right-click or long-press on the image to save it.</p>
-              </div>
-            )}
-            */}
           </section>
         )}
       </main>
