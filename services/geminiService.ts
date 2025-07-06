@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, HarmCategory, HarmBlockThreshold, FinishReason } from "@google/genai";
 
 // Ensure API_KEY is available from environment variables
@@ -51,11 +50,45 @@ export const generateLinkedInPostText = async (userInput: string, persona: strin
 
   const personaInstruction = getPersonaInstruction(persona);
 
-  let basePrompt = `You are an expert LinkedIn content creator specializing in AI and Generative AI news. 
-Your posts are professional, engaging, insightful, and concise (around 100-200 words). 
-Always include 2-4 relevant hashtags (e.g., #AI, #GenerativeAI, #TechNews, #Innovation, #FutureOfWork). 
-Ensure the tone is suitable for LinkedIn.
-Finally, always append the following to the very end of the post, after any other content and hashtags: #0to100xengineers #0to100xEngineer @100xengineers`;
+  let basePrompt = `You are an expert LinkedIn content creator specializing in viral and engaging content. Your posts follow proven viral LinkedIn strategies:
+
+**VIRAL LINKEDIN POST GUIDELINES:**
+
+1. **Compelling Hook**: Start with an intriguing, controversial, or thought-provoking statement that immediately grabs attention. Subtly hint at your expertise without being overtly promotional.
+
+2. **Clear & Concise Formatting**:
+   - Use short paragraphs (1-2 sentences max)
+   - Employ bullet points or one-line paragraphs for easy reading
+   - Use ample white space for mobile readability
+   - Strategically place content to encourage "read more" clicks
+
+3. **Valuable & Relevant Content**: 
+   - Share actionable insights, lessons learned, or industry-relevant advice
+   - Focus on trending topics that resonate with your target audience
+   - Provide genuine value that people want to share
+
+4. **Authentic Tone & Personal Branding**: 
+   - Maintain a consistent, genuine voice that reflects professional identity
+   - Be relatable while staying professional
+
+5. **Positive & Resilient Framing**: 
+   - Frame challenges or difficulties with a positive outlook
+   - Highlight growth, gratitude, or resilience
+   - Show learning and development mindset
+
+6. **Engaging Call-to-Action**: 
+   - End with thought-provoking questions that encourage comments
+   - Prompt discussions and interactions to extend reach
+   - Ask for experiences, opinions, or advice from your network
+
+7. **Strategic Content Structure**:
+   - Keep posts concise (100-200 words optimal)
+   - Include 2-4 relevant hashtags strategically placed
+   - Use data and trends to support your points
+   - Leverage proven viral structures and adapt them to your voice
+
+Focus on AI, Generative AI, and tech industry insights. Make the content shareable and discussion-worthy.
+Always append the following to the very end: #0to100xengineers #0to100xEngineer @100xengineers`;
 
   if (personaInstruction) {
     basePrompt = `${personaInstruction}\n\n${basePrompt}`;
@@ -65,15 +98,16 @@ Finally, always append the following to the very end of the post, after any othe
   if (userInput.trim()) {
     contentPrompt = `${basePrompt}
     
-Based on the following notes/links (summarize key takeaways if links are provided):
+Based on the following topic/content (extract key insights and create engaging content):
 ---
 ${userInput}
 ---
-Craft a LinkedIn post.`;
+
+Create a viral LinkedIn post following the guidelines above. Start with a compelling hook and end with an engaging question to drive comments.`;
   } else {
     contentPrompt = `${basePrompt}
     
-Craft a LinkedIn post about a recent development, interesting aspect, or a general insightful take on Generative AI or AI news relevant for today, ${currentDate}.`;
+Create a viral LinkedIn post about a recent AI/Generative AI development or trend for today, ${currentDate}. Follow the viral guidelines above - start with a compelling hook and end with an engaging question.`;
   }
 
   try {
@@ -101,7 +135,7 @@ Craft a LinkedIn post about a recent development, interesting aspect, or a gener
           if (candidate.finishReason === FinishReason.SAFETY && candidate.safetyRatings && candidate.safetyRatings.length > 0) {
             const harmfulCategories = candidate.safetyRatings
               .filter(r => r.probability !== "NEGLIGIBLE" && r.probability !== "LOW")
-              .map(r => r.category.replace('HARM_CATEGORY_', ''))
+              .map(r => r.category?.replace('HARM_CATEGORY_', '') || 'UNKNOWN')
               .join(', ');
             if (harmfulCategories) {
               reason += ` Potentially harmful content detected in categories: ${harmfulCategories}.`;
@@ -121,5 +155,116 @@ Craft a LinkedIn post about a recent development, interesting aspect, or a gener
         throw error;
     }
     throw new Error("Failed to generate LinkedIn post due to an unexpected error in the AI service.");
+  }
+};
+
+export const suggestPostImprovements = async (currentPost: string, persona: string): Promise<string> => {
+  if (!apiKey) throw new Error("Gemini API Key not configured. Please ensure the API_KEY environment variable is set.");
+
+  const model = 'gemini-2.5-flash-preview-04-17';
+  const personaInstruction = getPersonaInstruction(persona);
+
+  let basePrompt = `You are an expert LinkedIn content strategist specializing in viral content optimization. Improve the given post using proven viral LinkedIn strategies:
+
+**VIRAL OPTIMIZATION GUIDELINES:**
+
+1. **Compelling Hook Enhancement**: 
+   - Strengthen the opening with more intriguing/controversial statements
+   - Add curiosity gaps that make people want to read more
+   - Hint at valuable insights without giving everything away upfront
+
+2. **Format Optimization**:
+   - Break into shorter paragraphs (1-2 sentences max)
+   - Add bullet points or numbered lists for better readability
+   - Use white space strategically for mobile users
+   - Create natural "read more" break points
+
+3. **Value & Engagement Boost**:
+   - Add actionable insights or specific examples
+   - Include relevant data points or trends if applicable
+   - Make content more shareable and discussion-worthy
+   - Ensure genuine professional value
+
+4. **Authentic Voice Strengthening**:
+   - Enhance personal branding elements
+   - Add authentic, relatable touches
+   - Maintain professional credibility
+
+5. **Positive Framing**:
+   - Reframe any negative aspects with growth mindset
+   - Highlight learning opportunities and resilience
+   - Show gratitude and forward-thinking perspective
+
+6. **CTA Optimization**:
+   - End with compelling questions that drive comments
+   - Encourage specific types of engagement (sharing experiences, opinions)
+   - Create conversation starters that extend reach
+
+7. **Strategic Structure**:
+   - Optimize length (100-200 words ideal)
+   - Improve hashtag placement and relevance (2-4 hashtags)
+   - Enhance overall flow and readability
+
+Always maintain the core message while maximizing viral potential.
+Always append the following to the very end: #0to100xengineers #0to100xEngineer @100xengineers`;
+
+  if (personaInstruction) {
+    basePrompt = `${personaInstruction}\n\n${basePrompt}`;
+  }
+
+  const improvementPrompt = `${basePrompt}
+
+Original LinkedIn Post:
+---
+${currentPost}
+---
+
+Optimize this post for maximum viral potential while maintaining its core message. Focus on improving the hook, formatting, and call-to-action:`;
+
+  try {
+    const response: GenerateContentResponse = await ai.models.generateContent({
+      model: model,
+      contents: improvementPrompt,
+      config: {
+        temperature: 0.7,
+        topK: 32,
+        topP: 0.9,
+        safetySettings,
+      }
+    });
+    
+    const textOutput = response.text;
+
+    if (typeof textOutput === 'string' && textOutput.trim() !== '') {
+      return textOutput;
+    } else {
+      let reason = "The AI model did not provide any text content.";
+      if (response.candidates && response.candidates.length > 0) {
+        const candidate = response.candidates[0];
+        if (candidate.finishReason && candidate.finishReason !== FinishReason.STOP && candidate.finishReason !== FinishReason.FINISH_REASON_UNSPECIFIED) {
+          reason = `Model finished due to ${candidate.finishReason}.`;
+          if (candidate.finishReason === FinishReason.SAFETY && candidate.safetyRatings && candidate.safetyRatings.length > 0) {
+            const harmfulCategories = candidate.safetyRatings
+              .filter(r => r.probability !== "NEGLIGIBLE" && r.probability !== "LOW")
+              .map(r => r.category?.replace('HARM_CATEGORY_', '') || 'UNKNOWN')
+              .join(', ');
+            if (harmfulCategories) {
+              reason += ` Potentially harmful content detected in categories: ${harmfulCategories}.`;
+            }
+          }
+        }
+      }
+      console.warn("Gemini API returned no usable text for post improvement.", { reason, response });
+      throw new Error(`Failed to suggest post improvements: ${reason} Please try again later.`);
+    }
+  } catch (error) {
+    console.error("Error suggesting post improvements:", error);
+    if (error instanceof Error) {
+        if (error.message.includes('API key not valid') || error.message.includes('API_KEY_INVALID')) {
+             throw new Error("Invalid API Key for post improvement. Please check your API key configuration.");
+        }
+        throw error;
+    }
+    throw new Error("Failed to suggest post improvements due to an unexpected error in the AI service.");
   }
 };
